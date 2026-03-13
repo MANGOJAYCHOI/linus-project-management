@@ -775,7 +775,11 @@ async function handleFileUpload(input){
   const uplEl = document.getElementById('upl_'+pid+'_'+procid+'_'+outidx);
   if(uplEl) uplEl.classList.add('show');
 
-  const path = `${pid}/${procid}/${outidx}/${Date.now()}_${file.name}`;
+  // 파일명에서 특수문자/한글 제거 (Supabase Storage key 제한)
+  const safeName = file.name
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/_+/g, '_');
+  const path = `${pid}/${procid}/${outidx}/${Date.now()}_${safeName}`;
   const {data, error} = await sb.storage.from('outputs').upload(path, file, {upsert:true});
   if(uplEl) uplEl.classList.remove('show');
   input.value = '';
