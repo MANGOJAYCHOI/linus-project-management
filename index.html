@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>라이너스 | 직무 기반 프로젝트 관리</title>
-<link rel="icon" href="favicon.ico">
-<link rel="apple-touch-icon" href="favicon-64.png">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
 // ── SIDEBAR RESIZE ──
 (function(){
@@ -386,8 +387,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
 // ══════════════════════════════════════════
 //  ⚙️  SUPABASE 설정 — 개발자가 여기만 수정
 // ══════════════════════════════════════════
-const SUPABASE_URL  = 'https://mqaadptjatwxqmyazryk.supabase.co';
-const SUPABASE_KEY  = 'sb_publishable_00v5Z7K-k-nELFJKDAdUbw_oVMwimau';
+const SUPABASE_URL  = 'https://YOUR_PROJECT.supabase.co';
+const SUPABASE_KEY  = 'YOUR_ANON_KEY';
 // ══════════════════════════════════════════
 
 let sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
