@@ -40,3 +40,13 @@ alter table output_attachments enable row level security;
 create policy "public_all" on projects for all using (true) with check (true);
 create policy "public_all" on task_checks for all using (true) with check (true);
 create policy "public_all" on output_attachments for all using (true) with check (true);
+
+-- 5. Storage 버킷 생성 (파일 업로드용)
+insert into storage.buckets (id, name, public)
+values ('outputs', 'outputs', true)
+on conflict do nothing;
+
+-- 버킷 접근 정책 (로그인한 사용자만 업로드/조회)
+create policy "auth_read" on storage.objects for select using (bucket_id = 'outputs' and auth.role() = 'authenticated');
+create policy "auth_upload" on storage.objects for insert with check (bucket_id = 'outputs' and auth.role() = 'authenticated');
+create policy "auth_delete" on storage.objects for delete using (bucket_id = 'outputs' and auth.role() = 'authenticated');

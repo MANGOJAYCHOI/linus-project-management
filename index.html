@@ -236,6 +236,20 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
   font-family:inherit;transition:all .15s;flex-shrink:0;
 }
 .sb-logout:hover{background:#fee2e2;color:#ef4444;}
+
+/* ── 비밀번호 변경 모달 ── */
+.modal-msg{font-size:12px;margin-bottom:10px;padding:8px 12px;border-radius:7px;display:none;}
+.modal-msg.ok{display:block;background:#f0fdf4;border:1px solid var(--gm);color:var(--gd);}
+.modal-msg.err{display:block;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;}
+
+/* ── 파일 업로드 ── */
+.out-uploading{font-size:10.5px;color:var(--td);padding:3px 8px;border-top:1px solid var(--bs);display:none;align-items:center;gap:6px;}
+.out-uploading.show{display:flex;}
+.mini-spin{width:11px;height:11px;border:2px solid var(--gm);border-top-color:var(--green);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0;}
+
+/* ── sb-user 비밀번호 버튼 ── */
+.sb-pw{border:none;background:transparent;color:var(--tmu);font-size:11px;cursor:pointer;padding:3px 6px;border-radius:4px;font-family:inherit;transition:all .15s;flex-shrink:0;}
+.sb-pw:hover{background:var(--gl);color:var(--gd);}
 </style>
 </head>
 <body>
@@ -261,7 +275,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
   <div class="sb-user" id="sb-user" style="display:none">
     <div class="sb-user-avatar" id="sb-avatar"></div>
     <div class="sb-user-email" id="sb-email"></div>
-    <button class="sb-logout" onclick="doLogout()">로그아웃</button>
+    <button class="sb-pw" onclick="openPwModal()" title="비밀번호 변경">🔑</button><button class="sb-logout" onclick="doLogout()">로그아웃</button>
   </div>
   <div class="proc-nav" id="proc-nav">
     <div class="sb-sec-label">프로세스</div>
@@ -313,8 +327,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
 // ══════════════════════════════════════════
 //  ⚙️  SUPABASE 설정 — 개발자가 여기만 수정
 // ══════════════════════════════════════════
-const SUPABASE_URL  = 'https://mqaadptjatwxqmyazryk.supabase.co';
-const SUPABASE_KEY  = 'sb_publishable_00v5Z7K-k-nELFJKDAdUbw_oVMwimau';
+const SUPABASE_URL  = 'https://YOUR_PROJECT.supabase.co';
+const SUPABASE_KEY  = 'YOUR_ANON_KEY';
 // ══════════════════════════════════════════
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -620,6 +634,8 @@ function renderOutputs(p){
         <span class="out-name">${esc(out)}</span>
         <div class="out-acts">
           <button class="oa" title="링크" onclick="togglePanel(this)">🔗</button>
+          <button class="oa" title="파일 업로드" onclick="trigFile(this)">📎</button>
+          <input type="file" style="display:none" onchange="handleFileUpload(this)">
         </div>
       </div>
       <div class="out-panel">
@@ -628,6 +644,7 @@ function renderOutputs(p){
           <button class="out-save" onclick="saveLink(this)">저장</button>
         </div>
       </div>
+      <div class="out-uploading" id="upl_${apid}_${p.id}_${i}"><div class="mini-spin"></div>업로드 중...</div>
       ${att ? mkLink(att, pid, p.id, key, i) : ''}`;
     ol.appendChild(item);
   });
@@ -747,6 +764,62 @@ document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', 
 
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+
+// ── FILE UPLOAD ──
+function trigFile(btn){ btn.nextElementSibling.click(); }
+
+async function handleFileUpload(input){
+  const file = input.files[0]; if(!file) return;
+  const item = input.closest('.out-item');
+  const {pid, procid, outidx} = item.dataset;
+  const uplEl = document.getElementById('upl_'+pid+'_'+procid+'_'+outidx);
+  if(uplEl) uplEl.classList.add('show');
+
+  const path = `${pid}/${procid}/${outidx}/${Date.now()}_${file.name}`;
+  const {data, error} = await sb.storage.from('outputs').upload(path, file, {upsert:true});
+  if(uplEl) uplEl.classList.remove('show');
+  input.value = '';
+
+  if(error){ alert('파일 업로드 실패: ' + error.message); return; }
+
+  const {data:{publicUrl}} = sb.storage.from('outputs').getPublicUrl(path);
+  const att = {url: publicUrl, label: file.name, type: 'file'};
+  if(!pdata.outputs[procid]) pdata.outputs[procid] = {};
+  pdata.outputs[procid]['o'+outidx] = att;
+  const old = item.querySelector('.out-link'); if(old) old.remove();
+  item.insertAdjacentHTML('beforeend', mkLink(att, pid, procid, 'o'+outidx, outidx));
+  await upsertAttachment(pid, procid, parseInt(outidx), att);
+}
+
+// ── 비밀번호 변경 ──
+function openPwModal(){
+  document.getElementById('inp-pw-new').value = '';
+  document.getElementById('inp-pw-confirm').value = '';
+  const msg = document.getElementById('pw-msg');
+  msg.className = 'modal-msg'; msg.textContent = '';
+  document.getElementById('modal-pw').classList.add('show');
+  setTimeout(()=>document.getElementById('inp-pw-new').focus(), 60);
+}
+
+async function confirmPw(){
+  const pw1 = document.getElementById('inp-pw-new').value;
+  const pw2 = document.getElementById('inp-pw-confirm').value;
+  const msg = document.getElementById('pw-msg');
+  const btn = document.getElementById('pw-btn');
+  msg.className = 'modal-msg'; msg.textContent = '';
+
+  if(pw1.length < 6){ msg.className='modal-msg err'; msg.textContent='비밀번호는 6자 이상이어야 합니다.'; return; }
+  if(pw1 !== pw2){ msg.className='modal-msg err'; msg.textContent='비밀번호가 일치하지 않습니다.'; return; }
+
+  btn.disabled = true; btn.textContent = '변경 중...';
+  const {error} = await sb.auth.updateUser({password: pw1});
+  btn.disabled = false; btn.textContent = '변경';
+
+  if(error){ msg.className='modal-msg err'; msg.textContent='변경 실패: '+error.message; return; }
+  msg.className='modal-msg ok'; msg.textContent='✅ 비밀번호가 변경되었습니다.';
+  setTimeout(()=>closeModal('modal-pw'), 1500);
+}
+
 // ── AUTH ──
 async function doLogin(){
   const email = document.getElementById('login-email').value.trim();
@@ -809,6 +882,21 @@ async function initApp(){
   else hideLoading();
 }
 </script>
+
+
+<!-- 비밀번호 변경 모달 -->
+<div class="modal-bg" id="modal-pw">
+  <div class="modal">
+    <h3>🔑 비밀번호 변경</h3>
+    <div class="modal-msg" id="pw-msg"></div>
+    <input type="password" id="inp-pw-new" placeholder="새 비밀번호 (6자 이상)" onkeydown="if(event.key==='Enter')confirmPw()">
+    <input type="password" id="inp-pw-confirm" placeholder="새 비밀번호 확인" onkeydown="if(event.key==='Enter')confirmPw()">
+    <div class="modal-btns">
+      <button class="mbtn mbtn-c" onclick="closeModal('modal-pw')">닫기</button>
+      <button class="mbtn mbtn-ok" id="pw-btn" onclick="confirmPw()">변경</button>
+    </div>
+  </div>
+</div>
 
 <!-- LOGIN SCREEN -->
 <div id="login-screen">
