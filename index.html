@@ -385,11 +385,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
 // ══════════════════════════════════════════
 //  ⚙️  SUPABASE 설정 — 개발자가 여기만 수정
 // ══════════════════════════════════════════
-const SUPABASE_URL  = 'https://YOUR_PROJECT.supabase.co';
-const SUPABASE_KEY  = 'YOUR_ANON_KEY';
+const SUPABASE_URL  = 'https://mqaadptjatwxqmyazryk.supabase.co';
+const SUPABASE_KEY  = 'sb_publishable_00v5Z7K-k-nELFJKDAdUbw_oVMwimau';
 // ══════════════════════════════════════════
 
-let sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'linus-auth' } });
 
 // ── PROCESS DATA ──
 const PROCS=[
@@ -900,17 +900,13 @@ async function doLogin(){
   if(!email || !pw){ showLoginErr('이메일과 비밀번호를 입력하세요.'); return; }
   btn.disabled = true; btn.textContent = '로그인 중...';
   err.classList.remove('show');
-  // 자동 로그인 체크 여부에 따라 세션 유지 방식 결정
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { persistSession: remember, autoRefreshToken: remember }
-  });
-  if(!remember) await sb.auth.signOut(); // 기존 세션 제거
   const {data, error} = await sb.auth.signInWithPassword({email, password:pw});
   if(error){
     showLoginErr('이메일 또는 비밀번호가 올바르지 않습니다.');
     btn.disabled = false; btn.textContent = '로그인';
     return;
   }
+  localStorage.setItem('linus-remember', remember ? 'true' : 'false');
   onLogin(data.user);
 }
 
@@ -937,17 +933,14 @@ async function doLogout(){
 // ── INIT ──
 (async () => {
   showLoading();
-  // persistSession=true 클라이언트로 기존 세션 확인 (자동 로그인용)
-  const sbCheck = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true }
-  });
-  const {data:{session}} = await sbCheck.auth.getSession();
-  if(session){
-    sb = sbCheck; // 세션 있으면 해당 클라이언트 사용
-    onLogin(session.user);
+  const rememberMe = localStorage.getItem('linus-remember') === 'true';
+  if(rememberMe){
+    const {data:{session}} = await sb.auth.getSession();
+    if(session){ onLogin(session.user); return; }
   } else {
-    hideLoading();
+    await sb.auth.signOut();
   }
+  hideLoading();
 })();
 
 async function initApp(){
