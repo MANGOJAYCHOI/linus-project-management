@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>라이너스 직무기술서</title>
+<title>라이너스 | 직무 기반 프로젝트 관리</title>
+<link rel="icon" type="image/png" href="favicon.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -250,6 +251,24 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
 /* ── sb-user 비밀번호 버튼 ── */
 .sb-pw{border:none;background:transparent;color:var(--tmu);font-size:11px;cursor:pointer;padding:3px 6px;border-radius:4px;font-family:inherit;transition:all .15s;flex-shrink:0;}
 .sb-pw:hover{background:var(--gl);color:var(--gd);}
+
+/* 자동 로그인 체크박스 */
+.login-remember{
+  width:100%;display:flex;align-items:center;gap:7px;
+  margin-bottom:14px;cursor:pointer;
+}
+.login-remember input{width:14px;height:14px;accent-color:var(--green);cursor:pointer;flex-shrink:0;}
+.login-remember span{font-size:12px;color:var(--td);user-select:none;}
+
+/* ── 스낵바 ── */
+#snackbar{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:#1a1a1a;color:#fff;padding:10px 20px;border-radius:8px;
+  font-size:13px;font-weight:500;z-index:9999;
+  transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .3s;
+  opacity:0;pointer-events:none;white-space:nowrap;
+}
+#snackbar.show{transform:translateX(-50%) translateY(0);opacity:1;}
 </style>
 </head>
 <body>
@@ -260,14 +279,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
 <div id="topbar">
   <button class="menu-btn" onclick="toggleSb()"><span></span><span></span><span></span></button>
   <div class="topbar-dot"></div>
-  <div class="topbar-title" id="topbar-title">라이너스 직무기술서</div>
+  <div class="topbar-title" id="topbar-title">직무 기반 프로젝트 관리</div>
 </div>
 <div id="overlay" onclick="closeSb()"></div>
 
 <div id="sidebar">
   <div class="sb-logo">
     <div class="sb-logo-row"><div class="sb-dot"></div><div class="sb-co">주식회사 라이너스</div></div>
-    <div class="sb-sub">직무기술서</div>
+    <div class="sb-sub">직무 기반 프로젝트 관리</div>
   </div>
   <button class="sb-new" onclick="openNewModal()">＋ 새 프로젝트</button>
   <div class="sb-sec-label">프로젝트</div>
@@ -293,7 +312,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
   <div id="proj-view">
     <div class="pv-header">
       <div style="flex:1">
-        <div class="pv-label">프로젝트 직무기술서</div>
+        <div class="pv-label">직무 기반 프로젝트 관리</div>
         <div class="pv-title" id="pv-title"></div>
       </div>
       <button class="pv-btn" onclick="startRename()">✏️ 이름 변경</button>
@@ -331,7 +350,7 @@ const SUPABASE_URL  = 'https://mqaadptjatwxqmyazryk.supabase.co';
 const SUPABASE_KEY  = 'sb_publishable_00v5Z7K-k-nELFJKDAdUbw_oVMwimau';
 // ══════════════════════════════════════════
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 
 // ── PROCESS DATA ──
 const PROCS=[
@@ -521,7 +540,7 @@ async function selectProj(pid){
   apid = pid;
   const proj = projects.find(p => p.id === pid);
   document.getElementById('pv-title').textContent = proj ? proj.name : '';
-  document.getElementById('topbar-title').textContent = proj ? proj.name : '라이너스 직무기술서';
+  document.getElementById('topbar-title').textContent = proj ? proj.name : '직무 기반 프로젝트 관리';
   document.getElementById('welcome').style.display = 'none';
   document.getElementById('proj-view').style.display = 'block';
   renderProjList();
@@ -728,7 +747,7 @@ async function delProj(e, pid){
       document.getElementById('welcome').style.display = 'flex';
       document.getElementById('proj-view').style.display = 'none';
       document.getElementById('proc-nav').classList.remove('visible');
-      document.getElementById('topbar-title').textContent = '라이너스 직무기술서';
+      document.getElementById('topbar-title').textContent = '직무 기반 프로젝트 관리';
     }
     renderProjList();
   }
@@ -820,19 +839,33 @@ async function confirmPw(){
   btn.disabled = false; btn.textContent = '변경';
 
   if(error){ msg.className='modal-msg err'; msg.textContent='변경 실패: '+error.message; return; }
-  msg.className='modal-msg ok'; msg.textContent='✅ 비밀번호가 변경되었습니다.';
-  setTimeout(()=>closeModal('modal-pw'), 1500);
+  closeModal('modal-pw');
+  showSnack('✅ 비밀번호가 변경되었습니다.');
+}
+
+// ── SNACKBAR ──
+function showSnack(msg, duration=2500){
+  const el = document.getElementById('snackbar');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), duration);
 }
 
 // ── AUTH ──
 async function doLogin(){
-  const email = document.getElementById('login-email').value.trim();
-  const pw    = document.getElementById('login-pw').value;
-  const btn   = document.getElementById('login-btn');
-  const err   = document.getElementById('login-err');
+  const email    = document.getElementById('login-email').value.trim();
+  const pw       = document.getElementById('login-pw').value;
+  const remember = document.getElementById('login-remember').checked;
+  const btn      = document.getElementById('login-btn');
+  const err      = document.getElementById('login-err');
   if(!email || !pw){ showLoginErr('이메일과 비밀번호를 입력하세요.'); return; }
   btn.disabled = true; btn.textContent = '로그인 중...';
   err.classList.remove('show');
+  // 자동 로그인 체크 여부에 따라 세션 유지 방식 결정
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: remember, autoRefreshToken: remember }
+  });
+  if(!remember) await sb.auth.signOut(); // 기존 세션 제거
   const {data, error} = await sb.auth.signInWithPassword({email, password:pw});
   if(error){
     showLoginErr('이메일 또는 비밀번호가 올바르지 않습니다.');
@@ -864,13 +897,16 @@ async function doLogout(){
 // ── INIT ──
 (async () => {
   showLoading();
-  // Check existing session
-  const {data:{session}} = await sb.auth.getSession();
+  // persistSession=true 클라이언트로 기존 세션 확인 (자동 로그인용)
+  const sbCheck = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true }
+  });
+  const {data:{session}} = await sbCheck.auth.getSession();
   if(session){
+    sb = sbCheck; // 세션 있으면 해당 클라이언트 사용
     onLogin(session.user);
   } else {
     hideLoading();
-    // login screen is already visible
   }
 })();
 
@@ -906,7 +942,7 @@ async function initApp(){
 <div id="login-screen">
   <div class="login-box">
     <div class="login-logo"><div class="login-dot"></div><div class="login-co">주식회사 라이너스</div></div>
-    <div class="login-sub">직무기술서에 로그인하세요</div>
+    <div class="login-sub">직무 기반 프로젝트 관리</div>
     <div class="login-err" id="login-err"></div>
     <div class="login-field">
       <label>이메일</label>
@@ -917,10 +953,12 @@ async function initApp(){
       <input type="password" id="login-pw" placeholder="••••••••" autocomplete="current-password"
         onkeydown="if(event.key==='Enter')doLogin()">
     </div>
+    <label class="login-remember"><input type="checkbox" id="login-remember"><span>자동 로그인</span></label>
     <button class="login-btn" id="login-btn" onclick="doLogin()">로그인</button>
     <div class="login-footer">계정이 없으신가요? 관리자에게 문의하세요.</div>
   </div>
 </div>
 
+<div id="snackbar"></div>
 </body>
 </html>
