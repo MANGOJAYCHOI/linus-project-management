@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>라이너스 직무기술서</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#13AB4B;--gl:#e8f7ee;--gm:#c5ebd3;--gd:#0d7a35;
+  --bg:#f5f6f8;--card:#fff;--bd:#e5e7eb;--bs:#f0f1f3;
+  --tx:#111827;--tm:#374151;--td:#6b7280;--tmu:#9ca3af;
+  --sbw:220px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);display:flex;}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  width:var(--sbw);min-width:var(--sbw);background:#fff;
+  border-right:1px solid var(--bd);display:flex;flex-direction:column;
+  height:100vh;position:relative;z-index:200;
+  transition:transform .25s cubic-bezier(.4,0,.2,1);
+}
+.sb-logo{padding:18px 16px 12px;border-bottom:1px solid var(--bd);flex-shrink:0;}
+.sb-logo-row{display:flex;align-items:center;gap:7px;margin-bottom:3px;}
+.sb-dot{width:8px;height:8px;border-radius:50%;background:var(--green);}
+.sb-co{font-size:12.5px;font-weight:700;color:var(--tx);}
+.sb-sub{font-size:10px;color:var(--td);padding-left:15px;}
+.sb-new{
+  margin:10px 12px 4px;display:flex;align-items:center;justify-content:center;gap:5px;
+  padding:7px;border-radius:8px;border:1.5px dashed var(--gm);
+  background:var(--gl);color:var(--gd);font-size:11.5px;font-weight:600;
+  cursor:pointer;font-family:inherit;transition:all .15s;flex-shrink:0;
+}
+.sb-new:hover{background:var(--gm);border-color:var(--green);}
+.sb-sec-label{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:var(--tmu);font-weight:700;padding:5px 14px 3px;flex-shrink:0;}
+.proj-list{flex:1;min-height:0;overflow-y:auto;}
+.proj-item{display:flex;align-items:center;gap:7px;padding:7px 14px;cursor:pointer;transition:all .15s;border-left:2px solid transparent;}
+.proj-item:hover{background:var(--bg);}
+.proj-item.active{background:var(--gl);border-left-color:var(--green);}
+.proj-name{flex:1;font-size:11.5px;color:var(--tm);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.proj-item.active .proj-name{color:var(--gd);font-weight:700;}
+.proj-ico{font-size:13px;flex-shrink:0;}
+.proj-del{width:18px;height:18px;border:none;background:transparent;color:var(--tmu);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;flex-shrink:0;border-radius:3px;}
+.proj-item:hover .proj-del{opacity:1;}
+.proj-del:hover{background:#fee2e2;color:#ef4444;}
+
+/* Process nav */
+.proc-nav{flex-shrink:0;border-top:1px solid var(--bd);display:none;}
+.proc-nav.visible{display:block;}
+.pn-list{display:flex;flex-direction:column;}
+.pn-item{height:24px;display:flex;align-items:center;gap:7px;padding:0 14px;cursor:pointer;text-decoration:none;transition:background .12s;border-left:2px solid transparent;flex-shrink:0;}
+.pn-item:hover{background:var(--bg);}
+.pn-item.active{background:var(--gl);border-left-color:var(--green);}
+.pn-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.pn-num{font-size:8.5px;font-family:'JetBrains Mono',monospace;color:var(--tmu);width:14px;flex-shrink:0;}
+.pn-ko{font-size:11px;color:var(--td);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pn-item.active .pn-ko{color:var(--gd);font-weight:600;}
+.pn-item:hover .pn-ko{color:var(--tx);}
+
+/* ── CONTENT ── */
+#content{flex:1;overflow-y:auto;height:100vh;display:flex;flex-direction:column;}
+
+/* Loading overlay */
+#loading{
+  position:fixed;inset:0;background:rgba(255,255,255,.85);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:1000;gap:12px;
+}
+#loading.hidden{display:none;}
+.spinner{width:32px;height:32px;border:3px solid var(--gm);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:13px;color:var(--td);}
+
+#welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;}
+.w-ico{font-size:44px;margin-bottom:14px;}
+.w-title{font-size:20px;font-weight:700;margin-bottom:6px;}
+.w-sub{font-size:13px;color:var(--td);margin-bottom:20px;line-height:1.6;}
+.w-btn{padding:9px 22px;border-radius:8px;background:var(--green);color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:inherit;}
+.w-btn:hover{background:var(--gd);}
+
+#proj-view{display:none;padding:28px 36px 60px;}
+
+.pv-header{margin-bottom:22px;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;}
+.pv-label{font-size:8.5px;letter-spacing:3px;text-transform:uppercase;color:var(--tmu);font-weight:700;margin-bottom:4px;}
+.pv-title{font-size:22px;font-weight:900;color:var(--tx);flex:1;}
+.pv-btn{padding:5px 11px;border-radius:6px;border:1px solid var(--bd);background:#fff;color:var(--td);font-size:11.5px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.pv-btn:hover{border-color:var(--green);color:var(--green);}
+
+.proc-grid{display:grid;gap:14px;}
+.proc-card{background:#fff;border:1px solid var(--bd);border-radius:12px;overflow:hidden;transition:box-shadow .2s;}
+.proc-card:hover{box-shadow:0 4px 20px rgba(0,0,0,.07);}
+.card-hdr{display:flex;align-items:center;gap:11px;padding:13px 20px;border-bottom:1px solid var(--bs);border-left:3px solid var(--cc);}
+.card-num{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;font-family:'JetBrains Mono',monospace;background:color-mix(in srgb,var(--cc) 12%,transparent);color:var(--cc);}
+.card-en{font-size:8.5px;letter-spacing:2px;text-transform:uppercase;color:var(--tmu);}
+.card-ko{font-size:13.5px;font-weight:700;color:var(--tx);}
+.card-ico{font-size:17px;margin-left:auto;}
+.card-body{display:grid;grid-template-columns:1fr 1.2fr 1fr;}
+.col{padding:13px 18px;border-right:1px solid var(--bs);}
+.col:last-child{border-right:none;}
+.col-lbl{font-size:8.5px;letter-spacing:3px;text-transform:uppercase;color:var(--tmu);font-weight:700;margin-bottom:9px;}
+.team-list{display:flex;flex-direction:column;gap:5px;}
+.team-row{display:flex;align-items:flex-start;gap:6px;}
+.tp{width:15px;height:15px;border-radius:3px;background:var(--cc);color:#fff;font-size:8.5px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.tn{font-size:11.5px;color:var(--tm);font-weight:500;line-height:1.35;}
+.tr{font-size:10px;color:var(--tmu);}
+.task-list{display:flex;flex-direction:column;}
+.task-item{display:flex;align-items:flex-start;gap:7px;padding:4px 3px;border-bottom:1px solid var(--bs);cursor:pointer;border-radius:4px;transition:background .1s;}
+.task-item:last-child{border-bottom:none;}
+.task-item:hover{background:color-mix(in srgb,var(--cc) 7%,transparent);}
+.task-item input[type=checkbox]{width:13px;height:13px;flex-shrink:0;margin-top:3px;accent-color:var(--cc);cursor:pointer;}
+.task-txt{font-size:11.5px;color:var(--tm);line-height:1.6;user-select:none;}
+.task-item input:checked+.task-txt{color:var(--tmu);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--cc) 50%,transparent);}
+.out-list{display:flex;flex-direction:column;gap:5px;}
+.out-item{border:1px solid var(--bs);border-radius:6px;background:var(--bg);overflow:hidden;}
+.out-main{display:flex;align-items:center;gap:6px;padding:5px 8px;}
+.out-icon{font-size:11px;flex-shrink:0;}
+.out-name{font-size:11.5px;color:var(--tm);flex:1;line-height:1.35;}
+.out-acts{display:flex;gap:3px;flex-shrink:0;}
+.oa{width:22px;height:22px;border-radius:4px;border:1px solid var(--bd);background:#fff;color:var(--td);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.oa:hover{border-color:var(--cc);color:var(--cc);background:color-mix(in srgb,var(--cc) 8%,transparent);}
+.out-panel{padding:5px 8px;border-top:1px solid var(--bs);display:none;}
+.out-panel.show{display:block;}
+.out-inp-row{display:flex;gap:4px;}
+.out-inp{flex:1;padding:4px 8px;border:1px solid var(--bd);border-radius:4px;font-size:11px;font-family:inherit;outline:none;}
+.out-inp:focus{border-color:var(--cc);}
+.out-save{padding:4px 10px;border-radius:4px;background:var(--cc);color:#fff;border:none;font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.out-link{display:flex;align-items:center;gap:5px;padding:3px 8px;font-size:11px;color:var(--cc);text-decoration:none;border-top:1px solid var(--bs);}
+.out-link:hover{background:var(--gl);}
+.out-link .ln{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.ln-del{width:15px;height:15px;border:none;background:transparent;color:var(--tmu);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;}
+.ln-del:hover{color:#ef4444;}
+.prog-wrap{padding:7px 20px;border-top:1px solid var(--bs);display:flex;align-items:center;gap:9px;}
+.prog-track{flex:1;height:3px;background:var(--bd);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:2px;transition:width .3s;}
+.prog-lbl{font-size:9.5px;color:var(--tmu);font-family:'JetBrains Mono',monospace;min-width:30px;}
+
+/* ── MOBILE TOPBAR ── */
+#topbar{display:none;position:fixed;top:0;left:0;right:0;height:50px;background:#fff;border-bottom:1px solid var(--bd);align-items:center;padding:0 14px;gap:10px;z-index:300;}
+.menu-btn{width:34px;height:34px;border:none;background:transparent;cursor:pointer;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:4px;flex-shrink:0;}
+.menu-btn span{display:block;height:2px;background:var(--tm);border-radius:1px;}
+.topbar-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.topbar-title{flex:1;font-size:13.5px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+@media(max-width:768px){
+  html,body{height:100%;overflow:hidden;}
+  body{flex-direction:column;}
+  #topbar{display:flex;}
+  #sidebar{position:fixed;top:0;left:0;bottom:0;width:280px;height:auto;transform:translateX(-100%);box-shadow:4px 0 24px rgba(0,0,0,.13);z-index:400;}
+  #sidebar.open{transform:translateX(0);}
+  #overlay{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:350;display:none;}
+  #overlay.show{display:block;}
+  #content{padding-top:50px;overflow-y:auto;height:100vh;}
+  #proj-view{padding:20px 16px 40px;}
+  .card-body{grid-template-columns:1fr;}
+  .col{border-right:none;border-bottom:1px solid var(--bs);}
+  .col:last-child{border-bottom:none;}
+}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.32);display:none;align-items:center;justify-content:center;z-index:999;}
+.modal-bg.show{display:flex;}
+.modal{background:#fff;border-radius:14px;padding:24px;width:340px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.15);}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:14px;}
+.modal input{width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13.5px;font-family:inherit;outline:none;margin-bottom:14px;}
+.modal input:focus{border-color:var(--green);}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;}
+.mbtn{padding:7px 16px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;border:none;font-family:inherit;}
+.mbtn-c{background:var(--bg);color:var(--td);}
+.mbtn-ok{background:var(--green);color:#fff;}
+.mbtn-ok:hover{background:var(--gd);}
+
+/* DB 연결 오류 배너 */
+#db-error{display:none;padding:10px 20px;background:#fef2f2;border-bottom:1px solid #fecaca;font-size:12px;color:#dc2626;text-align:center;}
+
+[id]{scroll-margin-top:16px;}
+@media(max-width:768px){[id]{scroll-margin-top:64px;}}
+
+/* ── LOGIN SCREEN ── */
+#login-screen{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  z-index:2000;
+}
+#login-screen.hidden{display:none;}
+.login-box{
+  background:#fff;border-radius:16px;padding:40px 36px;
+  width:360px;max-width:90vw;
+  box-shadow:0 8px 40px rgba(0,0,0,.1);
+  display:flex;flex-direction:column;align-items:center;
+}
+.login-logo{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.login-dot{width:10px;height:10px;border-radius:50%;background:var(--green);}
+.login-co{font-size:15px;font-weight:800;color:var(--tx);}
+.login-sub{font-size:12px;color:var(--td);margin-bottom:28px;}
+.login-err{
+  width:100%;padding:8px 12px;border-radius:7px;
+  background:#fef2f2;border:1px solid #fecaca;
+  font-size:12px;color:#dc2626;margin-bottom:14px;display:none;
+}
+.login-err.show{display:block;}
+.login-field{width:100%;margin-bottom:12px;}
+.login-field label{display:block;font-size:11px;font-weight:600;color:var(--tm);margin-bottom:5px;letter-spacing:.3px;}
+.login-field input{
+  width:100%;padding:10px 13px;border:1.5px solid var(--bd);
+  border-radius:8px;font-size:13.5px;font-family:inherit;outline:none;
+  transition:border-color .15s;
+}
+.login-field input:focus{border-color:var(--green);}
+.login-btn{
+  width:100%;padding:11px;border-radius:9px;background:var(--green);
+  color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;
+  font-family:inherit;transition:background .15s;margin-top:4px;
+}
+.login-btn:hover{background:var(--gd);}
+.login-btn:disabled{background:var(--gm);cursor:not-allowed;}
+.login-footer{font-size:11px;color:var(--tmu);margin-top:18px;text-align:center;line-height:1.6;}
+
+/* ── USER AREA in sidebar ── */
+.sb-user{
+  flex-shrink:0;border-top:1px solid var(--bd);
+  padding:10px 14px;display:flex;align-items:center;gap:8px;
+}
+.sb-user-avatar{
+  width:26px;height:26px;border-radius:50%;background:var(--green);
+  color:#fff;font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.sb-user-email{flex:1;font-size:10.5px;color:var(--td);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sb-logout{
+  border:none;background:transparent;color:var(--tmu);
+  font-size:11px;cursor:pointer;padding:3px 6px;border-radius:4px;
+  font-family:inherit;transition:all .15s;flex-shrink:0;
+}
+.sb-logout:hover{background:#fee2e2;color:#ef4444;}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><div class="loading-txt">불러오는 중...</div></div>
+<div id="db-error">⚠️ Supabase 연결 실패 — SUPABASE_URL과 SUPABASE_ANON_KEY를 확인하세요.</div>
+
+<div id="topbar">
+  <button class="menu-btn" onclick="toggleSb()"><span></span><span></span><span></span></button>
+  <div class="topbar-dot"></div>
+  <div class="topbar-title" id="topbar-title">라이너스 직무기술서</div>
+</div>
+<div id="overlay" onclick="closeSb()"></div>
+
+<div id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-row"><div class="sb-dot"></div><div class="sb-co">주식회사 라이너스</div></div>
+    <div class="sb-sub">직무기술서</div>
+  </div>
+  <button class="sb-new" onclick="openNewModal()">＋ 새 프로젝트</button>
+  <div class="sb-sec-label">프로젝트</div>
+  <div class="proj-list" id="proj-list"></div>
+  <div class="sb-user" id="sb-user" style="display:none">
+    <div class="sb-user-avatar" id="sb-avatar"></div>
+    <div class="sb-user-email" id="sb-email"></div>
+    <button class="sb-logout" onclick="doLogout()">로그아웃</button>
+  </div>
+  <div class="proc-nav" id="proc-nav">
+    <div class="sb-sec-label">프로세스</div>
+    <div class="pn-list" id="pn-list"></div>
+  </div>
+</div>
+
+<div id="content">
+  <div id="welcome">
+    <div class="w-ico">📁</div>
+    <div class="w-title">프로젝트를 선택하세요</div>
+    <div class="w-sub">왼쪽 사이드바에서 프로젝트를 선택하거나<br>새 프로젝트를 만들어보세요.</div>
+    <button class="w-btn" onclick="openNewModal()">＋ 새 프로젝트 만들기</button>
+  </div>
+  <div id="proj-view">
+    <div class="pv-header">
+      <div style="flex:1">
+        <div class="pv-label">프로젝트 직무기술서</div>
+        <div class="pv-title" id="pv-title"></div>
+      </div>
+      <button class="pv-btn" onclick="startRename()">✏️ 이름 변경</button>
+    </div>
+    <div class="proc-grid" id="proc-grid"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-new">
+  <div class="modal">
+    <h3>새 프로젝트</h3>
+    <input id="inp-new" placeholder="프로젝트 이름" onkeydown="if(event.key==='Enter')confirmNew()">
+    <div class="modal-btns">
+      <button class="mbtn mbtn-c" onclick="closeModal('modal-new')">취소</button>
+      <button class="mbtn mbtn-ok" onclick="confirmNew()">만들기</button>
+    </div>
+  </div>
+</div>
+<div class="modal-bg" id="modal-rename">
+  <div class="modal">
+    <h3>이름 변경</h3>
+    <input id="inp-rename" placeholder="새 이름" onkeydown="if(event.key==='Enter')confirmRename()">
+    <div class="modal-btns">
+      <button class="mbtn mbtn-c" onclick="closeModal('modal-rename')">취소</button>
+      <button class="mbtn mbtn-ok" onclick="confirmRename()">변경</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  ⚙️  SUPABASE 설정 — 개발자가 여기만 수정
+// ══════════════════════════════════════════
+const SUPABASE_URL  = 'https://mqaadptjatwxqmyazryk.supabase.co';
+const SUPABASE_KEY  = 'sb_publishable_00v5Z7K-k-nELFJKDAdUbw_oVMwimau';
+// ══════════════════════════════════════════
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── PROCESS DATA ──
+const PROCS=[
+  {id:'p1', num:'01',en:'Pipeline Management',   ko:'파이프라인 관리',    ico:'🔍',color:'#13AB4B',
+   teams:[['사업팀','Lead Owner'],['전략기획팀','모델 적합성 검토']],
+   tasks:['리드 등록 (학교/담당자/유형)','예산 확인 (Opportunity)','대학 규모 분류','예산 가능성 1차 확인','기존 LMS/LXP 사용 여부 파악'],
+   outputs:['리드 등록 시트','대학 프로파일 카드','Pre-Sales 진입 여부 기록']},
+  {id:'p2', num:'02',en:'Proposal Authoring',    ko:'제안서 작성',        ico:'✍️',color:'#3B82F6',
+   teams:[['전략기획팀','총괄'],['기획/디자인팀','UX'],['개발팀','기술'],['사업팀','대외 커뮤니케이션']],
+   tasks:['제안 구조 설계','가격 모델링','기술 구성 확정','리스크 검토'],
+   outputs:['제안서','가격 산정 Sheet','기술 구성도','UX 시안','제안 내부 승인서']},
+  {id:'p3', num:'03',en:'Proposal Presentation', ko:'제안 발표',          ico:'🎤',color:'#8B5CF6',
+   teams:[['사업팀','발표 Lead'],['전략기획팀','스토리라인'],['디자인팀','발표 디자인']],
+   tasks:['발표 스크립트 작성','역할 분담','Q&A 시나리오 준비','데모 환경 점검'],
+   outputs:['제안발표자료','발표 스크립트','Demo 체크리스트','Q&A 예상 문서']},
+  {id:'p4', num:'04',en:'Contract Closing',      ko:'계약 체결',          ico:'🤝',color:'#6366F1',
+   teams:[['사업팀',''],['전략기획팀','가격 승인'],['경영기획팀','']],
+   tasks:['계약서 협상','Scope Fix','일정 합의','내부 매출 등록'],
+   outputs:['최종 계약서','Scope Fix 문서','납품 일정 합의서','내부 계약 등록 기록']},
+  {id:'p5', num:'05',en:'Billing & Revenue',     ko:'계산서/매출 관리',   ico:'💰',color:'#F59E0B',
+   teams:[['사업팀',''],['경영기획팀','']],
+   tasks:['선금/중도금/잔금 조건 관리','세금계산서 발행','수금 상태 체크','매출 인식 관리'],
+   outputs:['세금계산서','수금 관리 시트','매출 인식 기록','계약별 청구 일정표']},
+  {id:'p6', num:'06',en:'Kickoff Management',    ko:'프로젝트 착수',      ico:'🚀',color:'#F97316',
+   teams:[['사업팀','외부 커뮤니케이션'],['전략기획팀','전체 PM'],['고객성공팀','온보딩']],
+   tasks:['내부 킥오프 운영','고객 킥오프 진행','커뮤니케이션 채널 확정','책임자(Role) 매핑'],
+   outputs:['Kickoff Deck (내부/외부)','R&R 매트릭스','커뮤니케이션 룰 문서','프로젝트 조직도']},
+  {id:'p7', num:'07',en:'Detailed Design',       ko:'상세 설계 관리',     ico:'🎨',color:'#EC4899',
+   teams:[['기획/디자인팀','Lead'],['개발팀',''],['전략기획팀','Scope Control']],
+   tasks:['화면 정의','UX Flow 확정','데이터 흐름 설계','연동 정책 정의 (LTI, API 등)'],
+   outputs:['화면 정의서 (UX Spec)','기능 명세서','인터페이스 정의서','데이터 매핑 문서']},
+  {id:'p8', num:'08',en:'Build Management',      ko:'개발 & 연동 관리',   ico:'💻',color:'#06B6D4',
+   teams:[['개발팀','Lead'],['전략기획팀','일정/리스크'],['고객성공팀','운영 준비']],
+   tasks:['환경 구축','솔루션 연동 (LXP/LMS/Panopto/Zoom/Slack)','Feature Flag 관리','내부 QA'],
+   outputs:['시스템 아키텍처','배포 로그','연동 설정서','Feature Flag 리스트','내부 QA 리포트']},
+  {id:'p9', num:'09',en:'QA & Release Prep',     ko:'품질 검증 & 릴리즈', ico:'🔬',color:'#14B8A6',
+   teams:[['개발팀',''],['고객성공팀',''],['전략기획팀','']],
+   tasks:['통합 테스트','성능 테스트','릴리즈 체크리스트 검증','고객 승인 준비'],
+   outputs:['QA 결과서','릴리즈 체크리스트','Known Issue 리스트','오픈 승인 요청서']},
+  {id:'p10',num:'10',en:'Go-live Control',       ko:'서비스 오픈 관리',   ico:'🟢',color:'#10B981',
+   teams:[['고객성공팀','Lead'],['사업팀','대외 공지'],['개발팀','기술 대응']],
+   tasks:['관리자/교수자 교육','오픈 일정 통제','공지 메시지 작성','초기 트래픽 모니터링'],
+   outputs:['교육 자료','오픈 공지문','Sign-off 문서','초기 운영 체크리스트']},
+  {id:'p11',num:'11',en:'Stabilization Ops',     ko:'초기 안정화 운영',   ico:'🛡️',color:'#EF4444',
+   teams:[['고객성공팀','Lead'],['개발팀','기술 대응']],
+   tasks:['일일 장애 대응','사용자 피드백 수집','핫픽스 배포','운영 리스크 관리'],
+   outputs:['장애 로그','핫픽스 배포 기록','피드백 리포트','안정화 완료 보고서']},
+  {id:'p12',num:'12',en:'Operation & Growth',    ko:'운영 & 확장 관리',   ico:'📈',color:'#64748B',
+   teams:[['고객성공팀','Account Owner'],['사업팀','Upsell'],['전략기획팀','상품 전략']],
+   tasks:['월간 운영 미팅','활용도 분석','Pro 전환 제안','추가 라이선스 계약'],
+   outputs:['월간 운영 리포트','SLA 리포트','활용도 분석 자료','개선 제안서','추가 계약서']},
+];
+
+// ── STATE ──
+let projects = [];
+let apid = null;          // active project id
+let pdata = {};           // { checks: {}, outputs: {} } for active project
+
+// ── LOADING ──
+function showLoading(){ document.getElementById('loading').classList.remove('hidden'); }
+function hideLoading(){ document.getElementById('loading').classList.add('hidden'); }
+
+// ── SUPABASE: PROJECTS ──
+async function fetchProjects(){
+  const {data, error} = await sb.from('projects').select('*').order('created_at');
+  if(error){ showDbError(); return []; }
+  return data;
+}
+async function insertProject(id, name){
+  const {error} = await sb.from('projects').insert({id, name});
+  if(error){ alert('프로젝트 생성 실패: '+error.message); return false; }
+  return true;
+}
+async function updateProjectName(id, name){
+  const {error} = await sb.from('projects').update({name}).eq('id', id);
+  if(error){ alert('이름 변경 실패: '+error.message); return false; }
+  return true;
+}
+async function deleteProjectDB(id){
+  const {error} = await sb.from('projects').delete().eq('id', id);
+  if(error){ alert('삭제 실패: '+error.message); return false; }
+  return true;
+}
+
+// ── SUPABASE: TASK CHECKS ──
+async function fetchChecks(pid){
+  const {data, error} = await sb.from('task_checks').select('*').eq('project_id', pid);
+  if(error){ console.error(error); return {}; }
+  const map = {};
+  data.forEach(r => { map[r.proc_id+'_t'+r.task_index] = r.checked; });
+  return map;
+}
+async function upsertCheck(pid, procId, taskIndex, checked){
+  await sb.from('task_checks').upsert(
+    {project_id:pid, proc_id:procId, task_index:taskIndex, checked},
+    {onConflict:'project_id,proc_id,task_index'}
+  );
+}
+
+// ── SUPABASE: ATTACHMENTS ──
+async function fetchAttachments(pid){
+  const {data, error} = await sb.from('output_attachments').select('*').eq('project_id', pid);
+  if(error){ console.error(error); return {}; }
+  const map = {};
+  data.forEach(r => {
+    if(!map[r.proc_id]) map[r.proc_id] = {};
+    map[r.proc_id]['o'+r.output_index] = {url:r.url, label:r.label, type:r.type};
+  });
+  return map;
+}
+async function upsertAttachment(pid, procId, outputIndex, att){
+  await sb.from('output_attachments').upsert(
+    {project_id:pid, proc_id:procId, output_index:outputIndex, url:att.url, label:att.label, type:att.type},
+    {onConflict:'project_id,proc_id,output_index'}
+  );
+}
+async function deleteAttachment(pid, procId, outputIndex){
+  await sb.from('output_attachments').delete()
+    .eq('project_id', pid).eq('proc_id', procId).eq('output_index', outputIndex);
+}
+
+function showDbError(){ document.getElementById('db-error').style.display='block'; }
+
+// ── MOBILE ──
+function isMob(){ return window.innerWidth <= 768; }
+function toggleSb(){ document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); }
+function closeSb(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); }
+
+// ── RENDER PROJECT LIST ──
+function renderProjList(){
+  const el = document.getElementById('proj-list');
+  el.innerHTML = '';
+  if(!projects.length){
+    el.innerHTML = '<div style="padding:10px 14px;font-size:11px;color:var(--tmu)">프로젝트가 없습니다</div>';
+    return;
+  }
+  projects.forEach(p => {
+    const d = document.createElement('div');
+    d.className = 'proj-item' + (apid===p.id?' active':'');
+    d.innerHTML = `<span class="proj-ico">📁</span><span class="proj-name">${esc(p.name)}</span>
+      <button class="proj-del" onclick="delProj(event,'${p.id}')">✕</button>`;
+    d.addEventListener('click', () => { selectProj(p.id); if(isMob()) closeSb(); });
+    el.appendChild(d);
+  });
+}
+
+// ── RENDER PROCESS NAV ──
+function renderProcNav(){
+  const nav = document.getElementById('proc-nav');
+  const list = document.getElementById('pn-list');
+  if(!apid){ nav.classList.remove('visible'); return; }
+  nav.classList.add('visible');
+  list.innerHTML = '';
+  PROCS.forEach(p => {
+    const a = document.createElement('a');
+    a.className = 'pn-item';
+    a.href = '#';
+    a.dataset.id = p.id;
+    a.innerHTML = `<span class="pn-dot" style="background:${p.color}"></span>
+      <span class="pn-num">${p.num}</span>
+      <span class="pn-ko">${p.ko}</span>`;
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      document.querySelectorAll('.pn-item').forEach(x => x.classList.remove('active'));
+      a.classList.add('active');
+      if(isMob()) closeSb();
+      scrollToCard(apid+'_'+p.id);
+    });
+    list.appendChild(a);
+  });
+}
+
+function scrollToCard(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const offset = isMob() ? 64 : 16;
+  if(isMob()){
+    window.scrollTo({top: el.getBoundingClientRect().top + window.scrollY - offset, behavior:'smooth'});
+  } else {
+    document.getElementById('content').scrollTo({top: el.offsetTop - offset, behavior:'smooth'});
+  }
+}
+
+// ── SELECT PROJECT ──
+async function selectProj(pid){
+  showLoading();
+  apid = pid;
+  const proj = projects.find(p => p.id === pid);
+  document.getElementById('pv-title').textContent = proj ? proj.name : '';
+  document.getElementById('topbar-title').textContent = proj ? proj.name : '라이너스 직무기술서';
+  document.getElementById('welcome').style.display = 'none';
+  document.getElementById('proj-view').style.display = 'block';
+  renderProjList();
+  renderProcNav();
+
+  // Load data from Supabase
+  const [checks, outputs] = await Promise.all([fetchChecks(pid), fetchAttachments(pid)]);
+  pdata = { checks, outputs };
+
+  renderCards();
+  hideLoading();
+}
+
+// ── RENDER CARDS ──
+function renderCards(){
+  const grid = document.getElementById('proc-grid');
+  grid.innerHTML = '';
+  PROCS.forEach(p => grid.appendChild(buildCard(p)));
+}
+
+function buildCard(p){
+  const card = document.createElement('div');
+  card.className = 'proc-card';
+  card.id = apid+'_'+p.id;
+  card.style.setProperty('--cc', p.color);
+  card.innerHTML = `
+    <div class="card-hdr">
+      <div class="card-num">${p.num}</div>
+      <div style="flex:1"><div class="card-en">${p.en}</div><div class="card-ko">${p.ko}</div></div>
+      <span class="card-ico">${p.ico}</span>
+    </div>
+    <div class="card-body">
+      <div class="col">
+        <div class="col-lbl">주관팀</div>
+        <div class="team-list">
+          ${p.teams.map((t,i)=>`<div class="team-row">
+            <div class="tp">${i+1}</div>
+            <div><div class="tn">${esc(t[0])}</div>${t[1]?`<div class="tr">${esc(t[1])}</div>`:''}</div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div class="col">
+        <div class="col-lbl">주요 업무</div>
+        <div class="task-list" id="tl_${apid}_${p.id}"></div>
+      </div>
+      <div class="col">
+        <div class="col-lbl">산출물</div>
+        <div class="out-list" id="ol_${apid}_${p.id}"></div>
+      </div>
+    </div>
+    <div class="prog-wrap">
+      <div class="prog-track"><div class="prog-fill" id="pf_${apid}_${p.id}" style="width:0%;background:${p.color}"></div></div>
+      <div class="prog-lbl" id="pl_${apid}_${p.id}">0 / ${p.tasks.length}</div>
+    </div>`;
+  setTimeout(() => { renderTasks(p); renderOutputs(p); }, 0);
+  return card;
+}
+
+function renderTasks(p){
+  const pid = apid;
+  const tl = document.getElementById('tl_'+pid+'_'+p.id);
+  if(!tl) return;
+  const checks = pdata.checks || {};
+  tl.innerHTML = '';
+  p.tasks.forEach((task, i) => {
+    const key = p.id+'_t'+i;
+    const lbl = document.createElement('label');
+    lbl.className = 'task-item';
+    lbl.innerHTML = `<input type="checkbox" ${checks[key]?'checked':''}><span class="task-txt">${esc(task)}</span>`;
+    lbl.querySelector('input').addEventListener('change', async function(){
+      // Optimistic UI
+      pdata.checks[key] = this.checked;
+      updateProg(p, pid);
+      // Persist
+      await upsertCheck(pid, p.id, i, this.checked);
+    });
+    tl.appendChild(lbl);
+  });
+  updateProg(p, pid);
+}
+
+function updateProg(p, pid){
+  const tl = document.getElementById('tl_'+pid+'_'+p.id);
+  if(!tl) return;
+  const tot = p.tasks.length, chk = tl.querySelectorAll('input:checked').length;
+  const fill = document.getElementById('pf_'+pid+'_'+p.id);
+  const lbl = document.getElementById('pl_'+pid+'_'+p.id);
+  if(fill) fill.style.width = (tot ? chk/tot*100 : 0)+'%';
+  if(lbl) lbl.textContent = chk+' / '+tot;
+}
+
+function renderOutputs(p){
+  const pid = apid;
+  const ol = document.getElementById('ol_'+pid+'_'+p.id);
+  if(!ol) return;
+  const atts = (pdata.outputs || {})[p.id] || {};
+  ol.innerHTML = '';
+  p.outputs.forEach((out, i) => {
+    const key = 'o'+i;
+    const att = atts[key] || null;
+    const item = document.createElement('div');
+    item.className = 'out-item';
+    item.dataset.key = key;
+    item.dataset.pid = pid;
+    item.dataset.procid = p.id;
+    item.dataset.outidx = i;
+    item.innerHTML = `
+      <div class="out-main">
+        <span class="out-icon">📄</span>
+        <span class="out-name">${esc(out)}</span>
+        <div class="out-acts">
+          <button class="oa" title="링크" onclick="togglePanel(this)">🔗</button>
+        </div>
+      </div>
+      <div class="out-panel">
+        <div class="out-inp-row">
+          <input class="out-inp" type="text" placeholder="URL 입력" value="${att&&att.url?esc(att.url):''}">
+          <button class="out-save" onclick="saveLink(this)">저장</button>
+        </div>
+      </div>
+      ${att ? mkLink(att, pid, p.id, key, i) : ''}`;
+    ol.appendChild(item);
+  });
+}
+
+function mkLink(att, pid, procid, key, idx){
+  if(!att || !att.url) return '';
+  return `<a class="out-link" href="${esc(att.url)}" target="_blank" data-pid="${pid}" data-procid="${procid}" data-key="${key}" data-outidx="${idx}">
+    <span>🔗</span>
+    <span class="ln">${esc(att.label)}</span>
+    <button class="ln-del" onclick="rmLink(event,this)">✕</button>
+  </a>`;
+}
+
+function togglePanel(btn){
+  const p = btn.closest('.out-item').querySelector('.out-panel');
+  const s = !p.classList.contains('show');
+  p.classList.toggle('show', s);
+  if(s) p.querySelector('input').focus();
+}
+
+async function saveLink(btn){
+  const panel = btn.closest('.out-panel');
+  const item = panel.closest('.out-item');
+  const val = panel.querySelector('input').value.trim();
+  if(!val) return;
+  const {pid, procid, outidx} = item.dataset;
+  const att = {url: val, label: val, type: 'url'};
+  // Optimistic UI
+  if(!pdata.outputs[procid]) pdata.outputs[procid] = {};
+  pdata.outputs[procid]['o'+outidx] = att;
+  const old = item.querySelector('.out-link'); if(old) old.remove();
+  item.insertAdjacentHTML('beforeend', mkLink(att, pid, procid, 'o'+outidx, outidx));
+  panel.classList.remove('show');
+  // Persist
+  await upsertAttachment(pid, procid, parseInt(outidx), att);
+}
+
+async function rmLink(e, btn){
+  e.preventDefault(); e.stopPropagation();
+  const a = btn.closest('.out-link');
+  const {pid, procid, outidx} = a.dataset;
+  // Optimistic UI
+  if(pdata.outputs[procid]) delete pdata.outputs[procid]['o'+outidx];
+  a.remove();
+  // Persist
+  await deleteAttachment(pid, procid, parseInt(outidx));
+}
+
+// ── CRUD ──
+function openNewModal(){
+  document.getElementById('inp-new').value = '';
+  document.getElementById('modal-new').classList.add('show');
+  setTimeout(() => document.getElementById('inp-new').focus(), 60);
+}
+
+async function confirmNew(){
+  const name = document.getElementById('inp-new').value.trim();
+  if(!name) return;
+  const id = 'p' + Date.now();
+  showLoading();
+  closeModal('modal-new');
+  const ok = await insertProject(id, name);
+  if(ok){
+    projects.push({id, name});
+    renderProjList();
+    await selectProj(id);
+  }
+  hideLoading();
+}
+
+async function delProj(e, pid){
+  e.stopPropagation();
+  if(!confirm('삭제하시겠습니까?')) return;
+  showLoading();
+  const ok = await deleteProjectDB(pid);
+  if(ok){
+    projects = projects.filter(p => p.id !== pid);
+    if(apid === pid){
+      apid = null; pdata = {};
+      document.getElementById('welcome').style.display = 'flex';
+      document.getElementById('proj-view').style.display = 'none';
+      document.getElementById('proc-nav').classList.remove('visible');
+      document.getElementById('topbar-title').textContent = '라이너스 직무기술서';
+    }
+    renderProjList();
+  }
+  hideLoading();
+}
+
+function startRename(){
+  const proj = projects.find(p => p.id === apid);
+  if(!proj) return;
+  document.getElementById('inp-rename').value = proj.name;
+  document.getElementById('modal-rename').classList.add('show');
+  setTimeout(() => document.getElementById('inp-rename').focus(), 60);
+}
+
+async function confirmRename(){
+  const name = document.getElementById('inp-rename').value.trim();
+  if(!name) return;
+  closeModal('modal-rename');
+  showLoading();
+  const ok = await updateProjectName(apid, name);
+  if(ok){
+    const proj = projects.find(p => p.id === apid);
+    if(proj) proj.name = name;
+    renderProjList();
+    document.getElementById('pv-title').textContent = name;
+    document.getElementById('topbar-title').textContent = name;
+  }
+  hideLoading();
+}
+
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('show'); }));
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── AUTH ──
+async function doLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const pw    = document.getElementById('login-pw').value;
+  const btn   = document.getElementById('login-btn');
+  const err   = document.getElementById('login-err');
+  if(!email || !pw){ showLoginErr('이메일과 비밀번호를 입력하세요.'); return; }
+  btn.disabled = true; btn.textContent = '로그인 중...';
+  err.classList.remove('show');
+  const {data, error} = await sb.auth.signInWithPassword({email, password:pw});
+  if(error){
+    showLoginErr('이메일 또는 비밀번호가 올바르지 않습니다.');
+    btn.disabled = false; btn.textContent = '로그인';
+    return;
+  }
+  onLogin(data.user);
+}
+
+function showLoginErr(msg){
+  const err = document.getElementById('login-err');
+  err.textContent = msg; err.classList.add('show');
+}
+
+function onLogin(user){
+  document.getElementById('login-screen').classList.add('hidden');
+  const avatar = user.email.charAt(0).toUpperCase();
+  document.getElementById('sb-avatar').textContent = avatar;
+  document.getElementById('sb-email').textContent  = user.email;
+  document.getElementById('sb-user').style.display = 'flex';
+  initApp();
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  location.reload();
+}
+
+// ── INIT ──
+(async () => {
+  showLoading();
+  // Check existing session
+  const {data:{session}} = await sb.auth.getSession();
+  if(session){
+    onLogin(session.user);
+  } else {
+    hideLoading();
+    // login screen is already visible
+  }
+})();
+
+async function initApp(){
+  showLoading();
+  try {
+    projects = await fetchProjects();
+  } catch(e) {
+    showDbError();
+  }
+  renderProjList();
+  if(projects.length > 0) await selectProj(projects[0].id);
+  else hideLoading();
+}
+</script>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo"><div class="login-dot"></div><div class="login-co">주식회사 라이너스</div></div>
+    <div class="login-sub">직무기술서에 로그인하세요</div>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-field">
+      <label>이메일</label>
+      <input type="email" id="login-email" placeholder="name@linus.kr" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label>비밀번호</label>
+      <input type="password" id="login-pw" placeholder="••••••••" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">로그인</button>
+    <div class="login-footer">계정이 없으신가요? 관리자에게 문의하세요.</div>
+  </div>
+</div>
+
+</body>
+</html>
