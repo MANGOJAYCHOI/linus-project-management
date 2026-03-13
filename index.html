@@ -4,8 +4,38 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>라이너스 | 직무 기반 프로젝트 관리</title>
-<link rel="icon" type="image/png" href="favicon.png">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="icon" type="image/png" href="favicon.png?v=2">
+<link rel="apple-touch-icon" href="favicon-64.png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+// ── SIDEBAR RESIZE ──
+(function(){
+  const resizer = document.getElementById('sb-resizer');
+  const sidebar = document.getElementById('sidebar');
+  let startX, startW;
+  resizer.addEventListener('mousedown', e => {
+    startX = e.clientX;
+    startW = sidebar.offsetWidth;
+    resizer.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    function onMove(e){
+      const w = Math.min(360, Math.max(160, startW + e.clientX - startX));
+      sidebar.style.width = w + 'px';
+      sidebar.style.minWidth = w + 'px';
+    }
+    function onUp(){
+      resizer.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+})();
+
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -269,6 +299,15 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
   opacity:0;pointer-events:none;white-space:nowrap;
 }
 #snackbar.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* ── 사이드바 리사이즈 ── */
+#sb-resizer{
+  width:4px;flex-shrink:0;cursor:col-resize;
+  background:transparent;position:relative;z-index:210;
+  transition:background .15s;
+}
+#sb-resizer:hover, #sb-resizer.dragging{background:var(--green);}
+@media(max-width:768px){#sb-resizer{display:none;}}
 </style>
 </head>
 <body>
@@ -302,6 +341,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
   </div>
 </div>
 
+<div id="sb-resizer"></div>
 <div id="content">
   <div id="welcome">
     <div class="w-ico">📁</div>
@@ -882,9 +922,10 @@ function showLoginErr(msg){
 
 function onLogin(user){
   document.getElementById('login-screen').classList.add('hidden');
-  const avatar = user.email.charAt(0).toUpperCase();
+  const name   = user.user_metadata?.name || user.email;
+  const avatar = name.charAt(0).toUpperCase();
   document.getElementById('sb-avatar').textContent = avatar;
-  document.getElementById('sb-email').textContent  = user.email;
+  document.getElementById('sb-email').textContent  = name;
   document.getElementById('sb-user').style.display = 'flex';
   initApp();
 }
@@ -921,6 +962,35 @@ async function initApp(){
   if(projects.length > 0) await selectProj(projects[0].id);
   else hideLoading();
 }
+
+// ── SIDEBAR RESIZE ──
+(function(){
+  const resizer = document.getElementById('sb-resizer');
+  const sidebar = document.getElementById('sidebar');
+  let startX, startW;
+  resizer.addEventListener('mousedown', e => {
+    startX = e.clientX;
+    startW = sidebar.offsetWidth;
+    resizer.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    function onMove(e){
+      const w = Math.min(360, Math.max(160, startW + e.clientX - startX));
+      sidebar.style.width = w + 'px';
+      sidebar.style.minWidth = w + 'px';
+    }
+    function onUp(){
+      resizer.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+})();
+
 </script>
 
 
